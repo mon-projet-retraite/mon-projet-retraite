@@ -4,13 +4,86 @@ import yfinance as yf
 import numpy as np
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Companion Quantfury", layout="wide")
+st.set_page_config(
+    page_title="Companion Quantfury", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+# --- INJECTION CSS DESIGN MODERNE (DARK MODE & GLASSMORPHISM) ---
 st.markdown("""
 <style>
+    /* Fond principal sombre et moderne */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #f8fafc;
+    }
+    
+    /* Style du menu latéral */
+    [data-testid="stSidebar"] {
+        background-color: #0b1120 !important;
+        border-right: 1px solid #1e293b;
+    }
+    
+    /* Effet Glassmorphism pour les cartes / métriques */
+    div[data-testid="stMetric"] {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    div[data-testid="stMetricLabel"] {
+        color: #94a3b8 !important;
+        font-weight: 600;
+    }
+    
+    div[data-testid="stMetricValue"] {
+        color: #38bdf8 !important;
+        font-weight: 700;
+    }
+    
+    /* Titres avec dégradé moderne */
+    .main-title {
+        background: linear-gradient(90deg, #38bdf8, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        font-size: 2.2rem;
+        margin-bottom: 0px;
+    }
+    
+    .sub-title {
+        color: #94a3b8;
+        font-size: 1.1rem;
+        margin-bottom: 25px;
+    }
+
+    /* Style de la zone texte de la Fiche Synthétique */
     .stTextArea textarea {
-        font-family: monospace;
+        background-color: #090d16 !important;
+        color: #38bdf8 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
         font-size: 0.9em;
+    }
+
+    /* Boutons personnalisés */
+    .stButton>button {
+        border-radius: 8px;
+        background: linear-gradient(90deg, #2563eb, #3b82f6);
+        color: white;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton>button:hover {
+        background: linear-gradient(90deg, #1d4ed8, #2563eb);
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -26,12 +99,12 @@ def toggle_guide():
 col_title, col_settings = st.columns([0.78, 0.22])
 
 with col_title:
-    st.title("🛡️ Companion Retraite & Autonomie")
-    st.subheader("Méthode 'Double Moteur' & Filtre Feu Tricolore POC")
+    st.markdown('<p class="main-title">🛡️ Companion Retraite & Autonomie</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-title">Méthode "Double Moteur" & Filtre Feu Tricolore POC</p>', unsafe_allow_html=True)
 
 with col_settings:
     st.write("")
-    btn_label = "❌ Fermer le Guide" if st.session_state.show_guide else "⚙️ Guide & Règles"
+    btn_label = "❌ Masquer le Guide" if st.session_state.show_guide else "⚙️ Guide & Règles"
     st.button(btn_label, on_click=toggle_guide, use_container_width=True)
 
 # Fenêtre d'explications / Guide complet
