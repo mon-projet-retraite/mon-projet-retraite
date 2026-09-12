@@ -134,7 +134,7 @@ if st.session_state.show_guide:
 
         1. **Période d'observation (15 jours) :** Après le split, nous observons le marché pendant 15 jours sans rien toucher pour laisser le cours se stabiliser.
         2. **Le POC (Point of Control) :** L'algorithme calcule le niveau de prix exact où le plus grand volume d'achats s'est échangé durant ces 15 jours. C'est notre **prix d'achat idéal**.
-
+        3. **Un Lien (stock-splits) :** https://www.stocktitan.net/news/stock-splits.html.  verifier les lignes sans Icon (REVERSE)
         ---
 
         ### 🚥 3. Le Filtre Feu Tricolore (Règle Anti-FOMO)
