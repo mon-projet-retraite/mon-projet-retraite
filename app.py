@@ -125,7 +125,7 @@ if st.session_state.show_guide:
           * **Objectif :** Servir de ceinture de sécurité et faire fructifier le capital de base en continu.
         * **Moteur 2 : Le Moteur Trading (5 000 $)**
           * **Rôle :** Capter les mouvements explosifs sur les plus belles actions américaines grâce aux **Splits d'actions**.
-          * **Gestion des Lignes :** Maximum 3 lignes simultanées de **750 $** par opération.
+          * **Gestion des Lignes :** Maximum 4 lignes simultanées de **750 $** par opération.
 
         ---
 
