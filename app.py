@@ -173,7 +173,7 @@ if st.session_state.show_guide:
 @st.cache_data
 def load_quantfury_list():
     try:
-        df = pd.read_csv("Liste_quantfury.csv")
+        df = pd.read_csv("Liste_quantfury_clean.csv")
         return df['Ticker'].dropna().str.strip().unique().tolist()
     except Exception:
         return []
