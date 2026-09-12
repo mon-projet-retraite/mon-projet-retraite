@@ -79,7 +79,7 @@ if st.session_state.show_guide:
         * **Stop-Loss Initial :** Fixé strictement à **-6% du POC** dès l'entrée sur les 3 ordres.
         * **Ordre 1 (TP1) :** 40% des titres. Vente automatique à **POC x 1.50** (+50% de gain).
         * **Ordre 2 (TP2) :** 40% des titres. Dès que TP1 est vendu, le Stop-Loss des lignes restantes est monté à **+8% (Sécurisation)**. Vente automatique à **POC x 2.05** (+105% de gain).
-        * **Ordre 3 (Moonbag) :** 20% des titres. Pas de TP fixe ! On laisse courir avec un **Trailing Stop** ajusté chaque weekend.
+        * **Ordre 3 (Moonbag) :** 20% des titres. Pas de TP fixe ! Trailing Stop ajusté chaque weekend : `Cours Clôture - (ATR14 x 1.5)`.
 
         ---
 
@@ -107,16 +107,17 @@ def load_quantfury_list():
 
 quantfury_tickers = load_quantfury_list()
 
-# Récupération du cours et calcul du POC
+# Récupération du cours, calcul du POC et de l'ATR (14)
 def get_market_data(ticker_symbol, days=15, bins=30):
     try:
         tk = yf.Ticker(ticker_symbol)
         hist = tk.history(period="3mo", interval="1d")
         if hist.empty:
-            return None, None
+            return None, None, None, None
         
         close_friday = round(float(hist['Close'].iloc[-1]), 2)
         
+        # Calcul du POC sur 15j
         data = hist.tail(days)
         prices = (data['High'] + data['Low'] + data['Close']) / 3
         volumes = data['Volume']
@@ -125,9 +126,19 @@ def get_market_data(ticker_symbol, days=15, bins=30):
         max_idx = np.argmax(counts)
         poc_price = round(float((bin_edges[max_idx] + bin_edges[max_idx+1]) / 2), 2)
         
-        return close_friday, poc_price
+        # Calcul de l'ATR(14) et Trailing Stop (ATR x 1.5)
+        hist['High-Low'] = hist['High'] - hist['Low']
+        hist['High-PC'] = abs(hist['High'] - hist['Close'].shift(1))
+        hist['Low-PC'] = abs(hist['Low'] - hist['Close'].shift(1))
+        hist['TR'] = hist[['High-Low', 'High-PC', 'Low-PC']].max(axis=1)
+        hist['ATR14'] = hist['TR'].rolling(window=14).mean()
+        
+        atr14_val = round(float(hist['ATR14'].iloc[-1]), 2) if not np.isnan(hist['ATR14'].iloc[-1]) else round(close_friday * 0.03, 2)
+        trailing_stop_atr = round(close_friday - (atr14_val * 1.5), 2)
+        
+        return close_friday, poc_price, atr14_val, trailing_stop_atr
     except Exception:
-        return None, None
+        return None, None, None, None
 
 tab1, tab2 = st.tabs(["🔎 Scanner des Candidates Split", "📐 Calculateur POC & Feu Tricolore"])
 
@@ -187,16 +198,17 @@ with tab2:
             if quantfury_tickers:
                 st.success(f"✅ **{selected_ticker}** est validé et tradable sur Quantfury !")
             
-            with st.spinner(f"Analyse du cours et du POC pour {selected_ticker}..."):
-                close_price, auto_poc = get_market_data(selected_ticker, days=15)
+            with st.spinner(f"Analyse du cours, POC et ATR pour {selected_ticker}..."):
+                close_price, auto_poc, atr_14, ts_atr = get_market_data(selected_ticker, days=15)
             
             if close_price and auto_poc:
-                col_m1, col_m2, col_m3 = st.columns(3)
-                col_m1.metric("Cours Clôture Vendredi", f"{close_price} $")
+                col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+                col_m1.metric("Clôture Vendredi", f"{close_price} $")
                 col_m2.metric("POC Calculé (15j)", f"{auto_poc} $")
                 
                 ecart_pct = round(((close_price - auto_poc) / auto_poc) * 100, 2)
                 col_m3.metric("Écart / POC", f"{'+' if ecart_pct > 0 else ''}{ecart_pct} %")
+                col_m4.metric("ATR (14j)", f"{atr_14} $")
                 
                 st.markdown("#### 🚥 Signal d'Achetabilité")
                 
@@ -215,6 +227,8 @@ with tab2:
                 st.info("Données en direct indisponibles, saisie manuelle :")
                 close_price = st.number_input("Cours Clôture ($)", value=50.0)
                 poc_prix = st.number_input("POC ($)", value=48.0)
+                atr_14 = 1.5
+                ts_atr = round(close_price - (atr_14 * 1.5), 2)
                 can_trade = True
 
             if can_trade and poc_prix > 0:
@@ -248,7 +262,7 @@ with tab2:
                     st.metric("Ordre 3 (Moonbag)", f"{qte_moonbag} titres")
                     st.write(f"**Achat (Limite):** {poc_prix} $")
                     st.write(f"**SL (-6%):** {sl_initial} $")
-                    st.write("**TP:** Trailing Stop")
+                    st.write(f"**Trailing Stop (ATR x 1.5) :** {ts_atr} $")
                 
                 st.markdown("---")
                 
@@ -257,6 +271,6 @@ Achat total: {nb_titres} titres @ {poc_prix} $ ({engagement} $)
 
 1. ORDRE TP1: {qte_tp1} titres | Achat: {poc_prix} $ | SL: {sl_initial} $ | TP1: {tp1_prix} $
 2. ORDRE TP2: {qte_tp2} titres | Achat: {poc_prix} $ | SL: {sl_initial} $ | TP2: {tp2_prix} $
-3. MOONBAG:   {qte_moonbag} titres | Achat: {poc_prix} $ | SL: {sl_initial} $ | TP: Trailing Stop
+3. MOONBAG:   {qte_moonbag} titres | Achat: {poc_prix} $ | SL: {sl_initial} $ | Trailing Stop (ATR x 1.5): {ts_atr} $
 --------------------------------------------------"""
                 st.text_area("📋 Fiche synthétique (à copier ou capturer) :", fiche_text, height=140)
