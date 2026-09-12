@@ -15,8 +15,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# En-tête principal avec le bouton Paramètres / Engrenage
-col_title, col_settings = st.columns([0.85, 0.15])
+# Gestion de l'état du guide (Ouvert / Fermé)
+if 'show_guide' not in st.session_state:
+    st.session_state.show_guide = False
+
+def toggle_guide():
+    st.session_state.show_guide = not st.session_state.show_guide
+
+# En-tête principal avec le bouton toggle
+col_title, col_settings = st.columns([0.78, 0.22])
 
 with col_title:
     st.title("🛡️ Companion Retraite & Autonomie")
@@ -24,11 +31,13 @@ with col_title:
 
 with col_settings:
     st.write("")
-    show_guide = st.button("⚙️ Guide & Règles", use_container_width=True)
+    btn_label = "❌ Fermer le Guide" if st.session_state.show_guide else "⚙️ Guide & Règles"
+    st.button(btn_label, on_click=toggle_guide, use_container_width=True)
 
 # Fenêtre d'explications / Guide complet
-if show_guide:
-    with st.expander("📖 GUIDE COMPLET DE LA STRATÉGIE (À LIRE ABSOLUMENT)", expanded=True):
+if st.session_state.show_guide:
+    with st.container():
+        st.info("📖 **GUIDE COMPLET DE LA STRATÉGIE**")
         st.markdown("""
         ### 🚀 Bienvenue dans le Système Double Moteur
 
@@ -80,6 +89,11 @@ if show_guide:
         3. **Rien à l'horizon ?** On ferme l'application et on va boire son café !
         4. **Un split prêt ?** On copie la fiche synthétique et on saisit les 3 ordres sur Quantfury.
         """)
+        
+        if st.button("⬆️ Masquer / Réduire le Guide", key="close_guide_bottom"):
+            st.session_state.show_guide = False
+            st.rerun()
+            
         st.markdown("---")
 
 # Chargement de la liste Quantfury
