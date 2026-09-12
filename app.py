@@ -6,8 +6,81 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Companion Quantfury", layout="wide")
 
-st.title("🛡️ Companion Retraite & Autonomie")
-st.subheader("Détection des Splits Forward & Filtre Feu Tricolore POC")
+st.markdown("""
+<style>
+    .stTextArea textarea {
+        font-family: monospace;
+        font-size: 0.9em;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# En-tête principal avec le bouton Paramètres / Engrenage
+col_title, col_settings = st.columns([0.85, 0.15])
+
+with col_title:
+    st.title("🛡️ Companion Retraite & Autonomie")
+    st.subheader("Méthode 'Double Moteur' & Filtre Feu Tricolore POC")
+
+with col_settings:
+    st.write("")
+    show_guide = st.button("⚙️ Guide & Règles", use_container_width=True)
+
+# Fenêtre d'explications / Guide complet
+if show_guide:
+    with st.expander("📖 GUIDE COMPLET DE LA STRATÉGIE (À LIRE ABSOLUMENT)", expanded=True):
+        st.markdown("""
+        ### 🚀 Bienvenue dans le Système Double Moteur
+
+        Ce système a été conçu pour construire et protéger votre patrimoine de manière ultra-disciplinée.
+        **Temps requis : 3 minutes le samedi matin.**
+
+        ---
+
+        ### 🏦 1. L'Architecture des 2 Moteurs (Capital : 15 000 $)
+        * **Moteur 1 : Le Socle Spot (10 000 $)**
+          * **Rôle :** Générer un rendement passif régulier (~4.5% APR).
+          * **Objectif :** Servir de ceinture de sécurité et faire fructifier le capital de base en continu.
+        * **Moteur 2 : Le Moteur Trading (5 000 $)**
+          * **Rôle :** Capter les mouvements explosifs sur les plus belles actions américaines grâce aux **Splits d'actions**.
+          * **Gestion des Lignes :** Maximum 3 lignes simultanées de **750 $** par opération.
+
+        ---
+
+        ### 🎯 2. La Méthode "Split + POC"
+        Lorsqu'une grande entreprise annonce un **Split d'actions** (ex: division du prix par 10), cela attire un énorme flux d'acheteurs.
+
+        1. **Période d'observation (15 jours) :** Après le split, nous observons le marché pendant 15 jours sans rien toucher pour laisser le cours se stabiliser.
+        2. **Le POC (Point of Control) :** L'algorithme calcule le niveau de prix exact où le plus grand volume d'achats s'est échangé durant ces 15 jours. C'est notre **prix d'achat idéal**.
+
+        ---
+
+        ### 🚥 3. Le Filtre Feu Tricolore (Règle Anti-FOMO)
+        Le samedi matin, l'application compare le cours de clôture du vendredi avec le POC :
+
+        * 🟢 **FEU VERT (Prix Idéal) :** Le cours est proche du POC (entre 0% et +5%). L'achat est autorisé.
+        * 🟠 **FEU ORANGE (Zone d'Attente) :** Le cours a grimpé (+5% à +15% au-dessus du POC). **Ordre Limite OBLIGATOIRE sur le POC**. On ne court pas après le prix !
+        * 🔴 **FEU ROUGE (Trop Cher) :** Le prix est à plus de +15% du POC. **Ligne rejetée**, on ne touche à rien.
+
+        ---
+
+        ### 🛡️ 4. Plan de Traitement & Sortie des 3 Ordres
+        Pour chaque ligne de 750 $, l'achat est immédiatement fractionné en **3 ordres identiques** sur Quantfury :
+
+        * **Stop-Loss Initial :** Fixé strictement à **-6% du POC** dès l'entrée sur les 3 ordres.
+        * **Ordre 1 (TP1) :** 40% des titres. Vente automatique à **POC x 1.50** (+50% de gain).
+        * **Ordre 2 (TP2) :** 40% des titres. Dès que TP1 est vendu, le Stop-Loss des lignes restantes est monté à **+8% (Sécurisation)**. Vente automatique à **POC x 2.05** (+105% de gain).
+        * **Ordre 3 (Moonbag) :** 20% des titres. Pas de TP fixe ! On laisse courir avec un **Trailing Stop** ajusté chaque weekend.
+
+        ---
+
+        ### ☕ 5. La Routine du Samedi
+        1. Ouvrir l'application Companion.
+        2. Cliquer sur **Lancer le scan**.
+        3. **Rien à l'horizon ?** On ferme l'application et on va boire son café !
+        4. **Un split prêt ?** On copie la fiche synthétique et on saisit les 3 ordres sur Quantfury.
+        """)
+        st.markdown("---")
 
 # Chargement de la liste Quantfury
 @st.cache_data
@@ -20,7 +93,7 @@ def load_quantfury_list():
 
 quantfury_tickers = load_quantfury_list()
 
-# Récupération du cours de clôture du vendredi et calcul du POC
+# Récupération du cours et calcul du POC
 def get_market_data(ticker_symbol, days=15, bins=30):
     try:
         tk = yf.Ticker(ticker_symbol)
@@ -28,10 +101,8 @@ def get_market_data(ticker_symbol, days=15, bins=30):
         if hist.empty:
             return None, None
         
-        # Dernier cours de clôture disponible (Vendredi)
         close_friday = round(float(hist['Close'].iloc[-1]), 2)
         
-        # Calcul du POC sur les 15 derniers jours
         data = hist.tail(days)
         prices = (data['High'] + data['Low'] + data['Close']) / 3
         volumes = data['Volume']
@@ -110,11 +181,9 @@ with tab2:
                 col_m1.metric("Cours Clôture Vendredi", f"{close_price} $")
                 col_m2.metric("POC Calculé (15j)", f"{auto_poc} $")
                 
-                # Calcul de l'écart % par rapport au POC
                 ecart_pct = round(((close_price - auto_poc) / auto_poc) * 100, 2)
                 col_m3.metric("Écart / POC", f"{'+' if ecart_pct > 0 else ''}{ecart_pct} %")
                 
-                # Logique du Feu Signalétique
                 st.markdown("#### 🚥 Signal d'Achetabilité")
                 
                 if ecart_pct <= 5.0:
@@ -134,7 +203,6 @@ with tab2:
                 poc_prix = st.number_input("POC ($)", value=48.0)
                 can_trade = True
 
-            # Affichage des 3 ordres uniquement si VERT ou ORANGE
             if can_trade and poc_prix > 0:
                 st.markdown("---")
                 st.markdown(f"### 📋 Fiche d'exécution Quantfury pour {selected_ticker}")
